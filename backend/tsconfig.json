@@ -38,10 +38,10 @@
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,
-    "baseUrl": "./",
+    "baseUrl": "./src",
     // "@" as path alias to /src
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["*"]
     },
     "moduleDetection": "force",
     "skipLibCheck": true
