@@ -9,9 +9,9 @@
   },
   "license": "UNLICENSED",
   "scripts": {
-    "build": "tsc && tsc-alias",
-    "start": "tsx ./src/index.ts",
-    "dev": "tsx watch ./src/index.ts"
+    "dev": "tsx --tsconfig-paths src/index.ts",
+    "start": "tsx --tsconfig-paths src/index.ts",
+    "build": "tsc && tsc-alias"
   },
   "type": "module",
   "dependencies": {
