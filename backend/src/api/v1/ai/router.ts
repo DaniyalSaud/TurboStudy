@@ -1,4 +1,4 @@
-import { createNotes, deleteNotes, getNotes, getSimilarNotes, updateNote, uploadMiddleware } from "../../../controllers/ai-controller.js
+import { createNotes, deleteNotes, getNotes, getSimilarNotes, updateNote, uploadMiddleware } from "../../../controllers/ai-controller.js";
 import express, { type Request, type Response } from "express";
 
 const router = express.Router();    

@@ -1,5 +1,5 @@
 import express, { type Request, type Response } from "express";
-import aiRouter from "./ai/router.js
+import aiRouter from "./ai/router.js";
 
 const router = express.Router();
 
