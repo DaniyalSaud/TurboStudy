@@ -1,5 +1,5 @@
 import express, { type Request, type Response } from "express";
-import v1Router from "@/api/v1/router.js";
+import v1Router from "./api/v1/router.js";
 import dotenv from "dotenv";
 import { connectDB } from "./db/config.js";
 import { toNodeHandler } from "better-auth/node";
