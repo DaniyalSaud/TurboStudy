@@ -5,7 +5,6 @@ import { connectDB } from "./db/config.js";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "@/auth.js";
 import cors from "cors";
-import { chromaClient } from "./chromadb/db.js";
 
 dotenv.config();
 
@@ -31,13 +30,10 @@ app.use(express.urlencoded({ extended: true }));
 const PORT = process.env.PORT;
 
 app.get("/api", async (req: Request, res: Response) => {
-  const chroma_status = await chromaClient.heartbeat() !== 0 ? "OK" : "NOT OK";
 
-  
   res.status(200).json({
     message: "Express Server is working!",
     health: "OK",
-    chromadb_status: chroma_status,
   });
 });
 
