@@ -39,8 +39,9 @@
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,
     // "@" as path alias to /src
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./src/*"]
     },
     "moduleDetection": "force",
     "skipLibCheck": true
