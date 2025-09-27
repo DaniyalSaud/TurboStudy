@@ -1,7 +1,7 @@
 import { type Request, type Response } from "express";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import multer from "multer";
-import { auth } from "@/auth.js";
+import { auth } from "./../auth.js";
 
 type Body = {
   metadata: Record<string, any>;
