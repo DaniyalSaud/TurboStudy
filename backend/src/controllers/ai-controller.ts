@@ -1,7 +1,5 @@
 import { type Request, type Response } from "express";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
-import { vectorstore } from "@/chromadb/db.js";
-import type { Collection } from "chromadb";
 import multer from "multer";
 import { auth } from "@/auth.js";
 
@@ -48,7 +46,7 @@ export const createNotes = async (req: Request, res: Response) => {
 
     const allSplits = await textSplitter.createDocuments([notes_string]);
 
-    await vectorstore.addDocuments(allSplits);
+    // await vectorstore.addDocuments(allSplits);
 
     res.status(201).json({
       success: true,
@@ -70,15 +68,16 @@ export const getNotes = async (req: Request, res: Response) => {
       throw new Error("Note ID is required");
     }
 
-    const notes = await (
-      (await vectorstore.index?.getCollection({ name: "notes" })) as Collection
-    ).get({ ids: [id] });
+    // const notes = await (
+    //   (await vectorstore.index?.getCollection({ name: "notes" })) as Collection
+    // ).get({ ids: [id] });
 
-    res.status(200).json({
-      success: true,
-      message: "Notes fetched successfully",
-      data: notes,
-    });
+    // res.status(200).json({
+    //   success: true,
+    //   message: "Notes fetched successfully",
+    //   data: notes,
+    // });
+    res.send("Not implemented yet");
   } catch (error) {
     console.error("Error getting notes:", error);
     res.status(400).json({
