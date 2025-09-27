@@ -5,10 +5,13 @@
       "runtime": "@vercel/node@3"
     }
   },
+  "outputDirectory": "dist",
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
   "rewrites": [
     {
       "source": "/(.*)",
-      "destination": "/"
+      "destination": "/src/index"
     }
   ]
 }

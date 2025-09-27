@@ -9,6 +9,7 @@
   },
   "license": "UNLICENSED",
   "scripts": {
+    "build": "tsc",
     "start": "tsx ./src/index.ts",
     "dev": "tsx watch ./src/index.ts",
     "chroma:run": "chroma run --path ./src/chroma"
