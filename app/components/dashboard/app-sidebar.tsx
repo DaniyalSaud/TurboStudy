@@ -114,6 +114,10 @@ export function AppSidebar() {
 
   const { data, isPending } = authClient.useSession();
 
+  if (!data?.user) {
+    return null;
+  }
+
   return (
     <Sidebar className="border-r">
       <SidebarHeader className="py-4">
@@ -124,7 +128,7 @@ export function AppSidebar() {
           <div className="flex items-center justify-center w-8 h-8 bg-primary/10 rounded-lg">
             <MessageSquare className="h-5 w-5 text-primary" />
           </div>
-          <h1 className="text-xl font-semibold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+          <h1 className="text-xl font-semibold bg-linear-to-r from-primary to-primary/70 bg-clip-text text-transparent">
             TurboStudy
           </h1>
         </Link>
@@ -141,7 +145,7 @@ export function AppSidebar() {
                   className={({ isActive }: { isActive: boolean }) =>
                     cn(
                       "flex items-center gap-3 px-3 py-2 rounded-md text-sm text-accent-foreground/60 font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
-                      isActive && "bg-accent text-accent-foreground"
+                      isActive && "bg-accent text-accent-foreground",
                     )
                   }
                   end
@@ -156,7 +160,7 @@ export function AppSidebar() {
                   className={({ isActive }: { isActive: boolean }) =>
                     cn(
                       "flex items-center gap-3 px-3 py-2 rounded-md text-sm text-accent-foreground/60 font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
-                      isActive && "bg-accent text-accent-foreground"
+                      isActive && "bg-accent text-accent-foreground",
                     )
                   }
                   end
@@ -170,13 +174,13 @@ export function AppSidebar() {
         </SidebarGroup>
 
         {/* Chat History */}
-        <SidebarGroup className="flex-1">
+        <SidebarGroup className="flex-1 pr-0">
           <SidebarGroupLabel className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
             <Clock className="h-3 w-3" />
             Recent Chats
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <ScrollArea className="h-[350px] pr-2">
+            <ScrollArea className="h-[350px] pr-4">
               <SidebarMenu className="gap-1">
                 {chatHistory.map((chat) => (
                   <SidebarMenuItem key={chat.id}>
@@ -186,7 +190,7 @@ export function AppSidebar() {
                         cn(
                           "flex flex-col items-start gap-1 w-full p-2 text-accent-foreground/60 rounded-md text-sm transition-colors hover:bg-accent hover:text-accent-foreground group",
                           isActive &&
-                            "bg-accent text-accent-foreground font-medium"
+                            "bg-accent text-accent-foreground font-medium",
                         )
                       }
                     >
@@ -194,7 +198,7 @@ export function AppSidebar() {
                         <span className="text-sm font-medium truncate flex-1">
                           {truncateTitle(chat.title)}
                         </span>
-                        <DropdownMenu>
+                        <DropdownMenu modal={false}>
                           <DropdownMenuTrigger
                             asChild
                             onClick={(e) => e.preventDefault()}
@@ -230,7 +234,7 @@ export function AppSidebar() {
       </SidebarContent>
 
       {/* User Profile Footer */}
-      {!isPending && (
+      {!isPending && data?.user && (
         <SidebarFooter className="p-2">
           <SidebarMenu>
             <SidebarMenuItem>
@@ -246,7 +250,7 @@ export function AppSidebar() {
                         alt={data!.user.name}
                       />
                       <AvatarFallback className="bg-primary text-primary-foreground">
-                        {data!.user.name
+                        {data.user.name
                           .split(" ")
                           .map((n) => n[0])
                           .join("")}
@@ -254,10 +258,10 @@ export function AppSidebar() {
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight">
                       <span className="truncate font-semibold">
-                        {data!.user.name}
+                        {data.user.name}
                       </span>
                       <span className="truncate text-xs text-muted-foreground">
-                        {data!.user.email}
+                        {data.user.email}
                       </span>
                     </div>
                     <ChevronDown className="ml-auto h-4 w-4" />

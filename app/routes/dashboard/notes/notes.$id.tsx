@@ -1,5 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
-import { useParams } from "react-router";
+import React, { useState } from "react";
 import { Button } from "~/components/ui/button";
 import {
   Card,
@@ -15,23 +14,14 @@ import {
 } from "~/components/ui/resizable";
 import { Textarea } from "~/components/ui/textarea";
 import Markdown from "react-markdown";
-import {
-  Send,
-  Bot,
-  User,
-  FileText,
-  Lightbulb,
-  BookOpen,
-  Brain,
-  Sparkles,
-  History,
-  Edit3,
-  Download,
-} from "lucide-react";
+import { FileText, Edit3, Download, Loader2 } from "lucide-react";
 import type { Route } from "./+types/notes.$id";
 import { sessionContext } from "@/lib/session-context";
 import { Notes } from "@/models/Notes";
 import { ScrollArea } from "~/components/ui/scroll-area";
+import AIChat from "@/components/dashboard/notes/ai-chat";
+import { redirect } from "react-router";
+import { Chat } from "@/models/Chat";
 
 export async function loader({ context, params, request }: Route.LoaderArgs) {
   try {
@@ -41,30 +31,56 @@ export async function loader({ context, params, request }: Route.LoaderArgs) {
     }
     const user = context.get(sessionContext)?.user;
 
+    if (!user) {
+      throw redirect("/login");
+    }
+
     // Fetch the note by ID and userId and update the updatedAt timestamp
     const note = await Notes.findOneAndUpdate(
-      { _id: id, userId: user?.id },
-      { $set: { updatedAt: new Date() } },
-      { new: false }
-    ).lean();
+      { _id: id, userId: user.id },
+      { $set: { recentlyViewed: new Date() } },
+      { new: false },
+    );
 
     if (!note) {
       throw new Error("Note not found");
     }
 
+    let chat = await Chat.findOne({ noteId: note.id });
+    if (!chat) {
+      // Create a new chat associated with this note
+      const newChat = new Chat({
+        noteId: note.id,
+        userId: user.id,
+        systemPrompt: "None at the moment!",
+        messages: [],
+      });
+      await newChat.save();
+
+      chat = newChat;
+    }
+
+    if (chat?.userId.toString() !== user.id) {
+      throw new Error("Unauthorized access to the note and its chat");
+    }
+
+    // Fetch messages for the chat
+
     // Serialize the note to make it JSON-safe
     const serializedNote = {
-      ...note,
-      _id: note._id.toString(),
+      _id: note.id,
+      title: note.title,
+      content: note.content,
       userId: note.userId.toString(),
       createdAt: note.createdAt?.toISOString(),
       updatedAt: note.updatedAt?.toISOString(),
+      recentlyViewed: note.recentlyViewed?.toISOString(),
     };
 
     return { note: serializedNote };
   } catch (error) {
     console.error("Error loading note:", error);
-    return { note: null };
+    return { note: null, chat: null, messages: [] };
   }
 }
 
@@ -77,138 +93,73 @@ const formatTime = (date: Date) => {
 
 export default function NotesPage({ loaderData }: Route.ComponentProps) {
   const { note } = loaderData;
-
   const [noteContent, setNoteContent] = useState<string>(note?.content || "");
   const [noteTitle, setNoteTitle] = useState(note?.title || "Untitled Note");
   const [isEditing, setIsEditing] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(
-    note?.updatedAt ? new Date(note.updatedAt) : null
+    note?.updatedAt ? new Date(note.updatedAt) : null,
   );
+  const [isSaving, setIsSaving] = useState<boolean>(false);
 
-  // Chat state
-  const [message, setMessage] = useState("");
-  const [chatHistory, setChatHistory] = useState([
-    {
-      id: 1,
-      type: "assistant",
-      content:
-        "Hi! I'm your AI study assistant. I can help you with questions about this note, explain concepts, create study materials, and more. What would you like to know?",
-      timestamp: new Date(Date.now() - 2 * 60 * 1000),
-    },
-  ]);
-  const [isTyping, setIsTyping] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const handleSaveNote = async () => {
+    try {
+      setIsSaving(true);
+      const response = await fetch("/api/notes", {
+        body: JSON.stringify({
+          noteId: note?._id,
+          content: noteContent,
+          title: noteTitle,
+        }),
+        method: "POST",
+      });
 
-  const quickPrompts = [
-    {
-      icon: Lightbulb,
-      text: "Explain the key concepts in this note",
-      category: "Explanation",
-    },
-    {
-      icon: FileText,
-      text: "Create a summary of this note",
-      category: "Summary",
-    },
-    {
-      icon: Brain,
-      text: "Generate quiz questions from this content",
-      category: "Practice",
-    },
-    {
-      icon: BookOpen,
-      text: "Help me understand this topic better",
-      category: "Learning",
-    },
-    {
-      icon: Sparkles,
-      text: "Create flashcards from this material",
-      category: "Study Tools",
-    },
-  ];
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chatHistory]);
-
-  const handleSaveNote = () => {
-    setLastSaved(new Date());
-    setIsEditing(false);
+      console.log("Save response:", response);
+      if (!response.ok) {
+        throw new Error(await response.json());
+      }
+    } catch (err) {
+      console.error((err as Error).message);
+    } finally {
+      setIsEditing(false);
+      setIsSaving(false);
+    }
     // Here you would save to your backend
   };
 
-  const handleSendMessage = async () => {
-    if (!message.trim()) return;
-
-    const newUserMessage = {
-      id: Date.now(),
-      type: "user" as const,
-      content: message,
-      timestamp: new Date(),
-    };
-
-    setChatHistory((prev) => [...prev, newUserMessage]);
-    setMessage("");
-    setIsTyping(true);
-
-    // Simulate AI response
-    setTimeout(() => {
-      const aiResponse = {
-        id: Date.now() + 1,
-        type: "assistant" as const,
-        content: generateAIResponse(message),
-        timestamp: new Date(),
-      };
-      setChatHistory((prev) => [...prev, aiResponse]);
-      setIsTyping(false);
-    }, 1500);
-  };
-
-  const generateAIResponse = (userMessage: string): string => {
-    // Simple response generation for demo
-    if (userMessage.toLowerCase().includes("explain")) {
-      return "I'd be happy to explain the concepts in your note! Based on the content I can see, let me break down the key points with detailed explanations and examples.";
-    } else if (
-      userMessage.toLowerCase().includes("quiz") ||
-      userMessage.toLowerCase().includes("question")
-    ) {
-      return "Great idea! Here are some practice questions based on your note:\n\n1. What are the main concepts covered in this study material?\n2. Can you explain the relationship between the key points mentioned?\n3. How would you apply these concepts in a real-world scenario?\n\nWould you like me to create more questions or explain any of these topics?";
-    } else if (userMessage.toLowerCase().includes("summary")) {
-      return "Here's a comprehensive summary of your note:\n\n**Key Concepts:**\n• Main topics and their significance\n• Important relationships between ideas\n• Critical details to remember\n\n**Study Focus:**\n• Core principles to understand\n• Practical applications\n• Areas that might need more review\n\nWould you like me to elaborate on any specific section?";
-    } else {
-      return "That's an interesting question about your note! I can help you understand this topic better. Could you provide more specific details about what you'd like to focus on from your study material?";
-    }
-  };
-
-  const handleQuickPrompt = (prompt: string) => {
-    setMessage(prompt);
-  };
-
+  // Should not scroll
   return (
-    <div className="h-screen p-4">
+    <div className="h-screen px-0 py-2 sm:p-4">
       <ResizablePanelGroup direction="horizontal" className="h-full">
         {/* Notes Panel - Left Side (60% initial) */}
         <ResizablePanel defaultSize={60} minSize={50}>
-          <Card className="h-full flex flex-col">
+          <Card className="h-full flex flex-col p-0 border-0">
             <CardHeader className="border-b">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <FileText className="w-5 h-5 text-blue-500" />
                   <div>
-                    <CardTitle className="text-lg">{noteTitle}</CardTitle>
+                    <CardTitle className="text-base sm:text-lg line-clamp-1">{noteTitle}</CardTitle>
                     <CardDescription className="text-sm">
-                      {lastSaved
+                      {lastSaved && !isSaving
                         ? `Last saved: ${formatTime(lastSaved)}`
                         : "Not saved"}
+                      {isSaving && (
+                        <Loader2 className="w-4 h-4 inline-block ml-2 animate-spin" />
+                      )}
                     </CardDescription>
                   </div>
                 </div>
                 <div className="flex space-x-2">
                   <Button
                     variant="outline"
-                    onClick={() => setIsEditing(!isEditing)}
+                    onClick={() => {
+                      setIsEditing(!isEditing);
+                      if (isEditing) {
+                        handleSaveNote();
+                      }
+                    }}
                   >
-                    <Edit3 className="w-4 h-4 mr-1" />
+                    <Edit3 className="w-4 h-4 sm:mr-1" />
                     {isEditing ? "Preview" : "Edit"}
                   </Button>
                   <Button
@@ -216,8 +167,8 @@ export default function NotesPage({ loaderData }: Route.ComponentProps) {
                     onClick={handleSaveNote}
                     disabled={!isEditing}
                   >
-                    <Download className="w-4 h-4 mr-1" />
-                    Download
+                    <Download className="w-4 h-4 sm:mr-1" />
+                    <span className="hidden sm:inline">Download</span>
                   </Button>
                 </div>
               </div>
@@ -244,154 +195,10 @@ export default function NotesPage({ loaderData }: Route.ComponentProps) {
           </Card>
         </ResizablePanel>
 
-        <ResizableHandle className="opacity-0 rounded-full p-0.5 my-4 mx-1 hover:bg-neutral-700 dark:hover:bg-neutral-500 dark:hover:opacity-100 transition-all" />
+        <ResizableHandle className="hidden sm:block opacity-0 rounded-full p-0.5 my-4 mx-1 hover:bg-neutral-700 dark:hover:bg-neutral-500 dark:hover:opacity-100 transition-all" />
 
         {/* Chat Panel - Right Side (40% initial) */}
-        <ResizablePanel defaultSize={40} minSize={30}>
-          <Card className="h-full flex flex-col">
-            {/* Chat Header */}
-            <CardHeader className="border-b">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                    <Bot className="w-4 h-4 text-white" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg">TurboStudy AI</CardTitle>
-                    <CardDescription className="text-sm">
-                      Ask questions about your note
-                    </CardDescription>
-                  </div>
-                </div>
-                <Button variant="outline" size="sm">
-                  <History className="w-4 h-4 mr-2" />
-                  History
-                </Button>
-              </div>
-            </CardHeader>
-
-            {/* Quick Actions */}
-            <div className="border-b p-3">
-              <div className="text-xs font-medium text-gray-500 mb-2">
-                Quick Actions
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {quickPrompts.map((prompt, index) => (
-                  <Button
-                    key={index}
-                    variant="outline"
-                    size="sm"
-                    className="text-xs h-7"
-                    onClick={() => handleQuickPrompt(prompt.text)}
-                  >
-                    <prompt.icon className="w-3 h-3 mr-1" />
-                    {prompt.category}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {/* Messages */}
-            <CardContent className="flex-1 p-4 overflow-y-auto">
-              <div className="space-y-4">
-                {chatHistory.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex ${msg.type === "user" ? "justify-end" : "justify-start"}`}
-                  >
-                    <div
-                      className={`flex space-x-3 max-w-[85%] ${msg.type === "user" ? "flex-row-reverse space-x-reverse" : ""}`}
-                    >
-                      {/* Avatar */}
-                      <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          msg.type === "user"
-                            ? "bg-gray-200"
-                            : "bg-gradient-to-r from-blue-500 to-purple-600"
-                        }`}
-                      >
-                        {msg.type === "user" ? (
-                          <User className="w-3 h-3 text-gray-600" />
-                        ) : (
-                          <Bot className="w-3 h-3 text-white" />
-                        )}
-                      </div>
-
-                      {/* Message Bubble */}
-                      <div
-                        className={`rounded-lg px-3 py-2 text-sm ${
-                          msg.type === "user"
-                            ? "bg-blue-600 text-white"
-                            : "bg-gray-100 text-gray-900"
-                        }`}
-                      >
-                        <div className="whitespace-pre-wrap">{msg.content}</div>
-                        <div
-                          className={`text-xs mt-1 ${msg.type === "user" ? "text-blue-100" : "text-gray-500"}`}
-                        >
-                          {formatTime(msg.timestamp)}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                {/* Typing Indicator */}
-                {isTyping && (
-                  <div className="flex justify-start">
-                    <div className="flex space-x-3 max-w-[85%]">
-                      <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                        <Bot className="w-3 h-3 text-white" />
-                      </div>
-                      <div className="bg-gray-100 rounded-lg px-3 py-2">
-                        <div className="flex space-x-1">
-                          <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></div>
-                          <div
-                            className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"
-                            style={{ animationDelay: "0.1s" }}
-                          ></div>
-                          <div
-                            className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"
-                            style={{ animationDelay: "0.2s" }}
-                          ></div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div ref={messagesEndRef} />
-              </div>
-            </CardContent>
-
-            {/* Input Area */}
-            <div className="border-t p-3">
-              <div className="flex space-x-2">
-                <div className="flex-1">
-                  <input
-                    type="text"
-                    value={message}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setMessage(e.target.value)
-                    }
-                    onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) =>
-                      e.key === "Enter" && handleSendMessage()
-                    }
-                    placeholder="Ask about your note..."
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <Button
-                  onClick={handleSendMessage}
-                  disabled={!message.trim()}
-                  size="sm"
-                >
-                  <Send className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          </Card>
-        </ResizablePanel>
+        <AIChat chatId="342389438200342389438200" />
       </ResizablePanelGroup>
     </div>
   );

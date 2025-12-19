@@ -12,10 +12,6 @@ import "./app.css";
 import { ThemeProvider } from "./components/providers/theme-provider";
 import { Toaster } from "sonner";
 
-import { connectToMongoDB } from "@/db/config";
-
-connectToMongoDB();
-
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -76,6 +72,10 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
       error.status === 404
         ? "The requested page could not be found."
         : error.statusText || details;
+    if (error.status === 401){
+      details = "You are not authorized to view this page.";
+      message = error.data.error
+    }   
   } else if (import.meta.env.DEV && error && error instanceof Error) {
     details = error.message;
     stack = error.stack;

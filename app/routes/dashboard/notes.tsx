@@ -1,34 +1,60 @@
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  FileText,
-  Clock,
-  Star,
-  Eye,
-  Edit,
-  MoreVertical,
-  BookOpen,
-  Search,
-  Filter,
-  SortAsc,
-  Download,
-  Share2,
-} from "lucide-react";
-import { Link, redirect } from "react-router";
+import { FileText, BookOpen, Search, Filter } from "lucide-react";
+import { Link, redirect, useSearchParams} from "react-router";
 import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { Route } from "./+types/notes";
-import { Notes, type INotes } from "@/models/Notes";
 import { auth } from "@/lib/auth.server";
 import { sessionContext } from "@/lib/session-context";
-import type { Query } from "mongoose";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import { getNotes } from "@/lib/DAL/notes";
+import NotesCard from "@/components/dashboard/notes/notes-card";
+import { Notes } from "@/models/Notes";
+
+export async function action({ context, params, request }: Route.ActionArgs) {
+  try {
+    const body = await request.json();
+    const user = context.get(sessionContext)?.user;
+    if (!user){
+      throw new Response("Unauthorized", { status: 401 });
+    }
+    if (body.action === "delete") {
+      const deletedNote = await Notes.deleteOne({
+        _id: body.noteId,
+        userId: user.id,
+      });
+
+      if (!deletedNote.acknowledged) {
+        throw new Error("Note not found or could not be deleted");
+      }
+    }
+
+    return new Response(JSON.stringify({ success: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    console.error("Error in notes action:", err);
+    throw new Response(JSON.stringify({ success: false, error: (err as Error).message }), {
+      status: 404,
+    });
+  }
+}
 
 export async function loader({ context, params, request }: Route.LoaderArgs) {
   const session = await auth.api.getSession(request);
@@ -40,7 +66,9 @@ export async function loader({ context, params, request }: Route.LoaderArgs) {
     const url = new URL(request.url);
     const searchQuery = url.searchParams.get("search") || "";
     const page = parseInt(url.searchParams.get("page") || "1");
+    const sortBy = url.searchParams.get("sortBy") || "recent";
     const notesPerPage = 10;
+
     const user = context.get(sessionContext)?.user;
 
     // Fetch notes from the database using userId
@@ -48,55 +76,115 @@ export async function loader({ context, params, request }: Route.LoaderArgs) {
       throw new Error("User not found in session");
     }
 
-    // Build query to filter by userId
-    let query: any = { userId: user.id };
-    
-    if (searchQuery) {
-      // Use regex for more flexible search with userId filter
-      query = {
-        userId: user.id,
-        $or: [
-          { title: { $regex: searchQuery, $options: "i" } },
-          { subject: { $regex: searchQuery, $options: "i" } },
-          { summary: { $regex: searchQuery, $options: "i" } },
-        ],
-      };
-    }
+    const { notes, filteredCount, totalNotesCount } = await getNotes(
+      user.id,
+      searchQuery,
+      page,
+      notesPerPage,
+      sortBy
+    );
 
-    // Fetch the total notes count for this user
-    const totalNotesCount = await Notes.countDocuments({ userId: user.id });
-    const filteredCount = await Notes.countDocuments(query);
-    const notes = await Notes.find(query)
-      .select([
-        "_id",
-        "title",
-        "subject",
-        "summary",
-        "tags",
-        "updatedAt",
-        "userId",
-      ])
-      .skip((page - 1) * notesPerPage)
-      .limit(notesPerPage)
-      .lean(); // Convert to plain JavaScript objects
-
-    // Convert ObjectIds to strings for serialization
     const serializedNotes = notes.map((note) => ({
       ...note,
       _id: note._id.toString(),
       userId: note.userId.toString(),
     }));
 
-    console.log("Fetched notes:", serializedNotes);
-    return { notes: serializedNotes, count: filteredCount, total: totalNotesCount };
+    return {
+      notes: serializedNotes,
+      count: filteredCount,
+      total: totalNotesCount,
+      currentPage: page,
+      notesPerPage: notesPerPage,
+      totalPages: Math.ceil(filteredCount / notesPerPage),
+    };
   } catch (error) {
     console.error("Error fetching notes:", error);
-    return { notes: [], total: 0 };
+    return {
+      notes: [],
+      total: 0,
+      count: 0,
+      currentPage: 1,
+      notesPerPage: 10,
+      totalPages: 0,
+    };
   }
 }
 
-export default function NotesPage({ loaderData }: Route.ComponentProps) {
-  const { notes, total } = loaderData;
+export default function NotesPage({
+  loaderData,
+  params,
+}: Route.ComponentProps) {
+  const { notes, total, count, currentPage, notesPerPage, totalPages } =
+    loaderData;
+  // Generate page numbers to display
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    const maxPagesToShow = 5;
+
+    if (totalPages <= maxPagesToShow) {
+      // Show all pages if total pages is less than max
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Always show first page
+      pages.push(1);
+
+      if (currentPage > 3) {
+        pages.push("...");
+      }
+
+      // Show pages around current page
+      const startPage = Math.max(2, currentPage - 1);
+      const endPage = Math.min(totalPages - 1, currentPage + 1);
+
+      for (let i = startPage; i <= endPage; i++) {
+        pages.push(i);
+      }
+
+      if (currentPage < totalPages - 2) {
+        pages.push("...");
+      }
+
+      // Always show last page
+      pages.push(totalPages);
+    }
+
+    return pages;
+  };
+
+  const pageNumbers = getPageNumbers();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [search, setSearch] = useState<string>(
+    searchParams.get("search") || ""
+  );
+  const [sortBy, setSortBy] = useState<string>(
+    searchParams.get("sortBy") || "recent"
+  );
+
+  const handleSearchTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearch(e.target.value);
+  };
+
+  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      const params = new URLSearchParams(searchParams);
+      params.set("search", search.trim());
+      params.set("page", "1");
+      if (sortBy) params.set("sortBy", sortBy);
+      setSearchParams(params);
+    }
+  };
+
+  const handleSortChange = (value: string) => {
+    setSortBy(value);
+    const params = new URLSearchParams(searchParams);
+    params.set("sortBy", value);
+    params.set("page", "1");
+    if (search) params.set("search", search);
+    setSearchParams(params);
+  };
 
   return (
     <div className="p-5">
@@ -122,131 +210,62 @@ export default function NotesPage({ loaderData }: Route.ComponentProps) {
           <Input
             placeholder="Search notes by title or subject..."
             className="pl-10 pr-4 py-2 w-full bg-neutral-50 dark:bg-neutral-900"
+            value={search}
+            onChange={handleSearchTextChange}
+            onKeyDownCapture={handleSearch}
           />
         </div>
 
         {/* Filter and Sort Controls */}
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            className="bg-neutral-50 dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-          >
-            <Filter className="h-4 w-4 mr-1" />
-            Filter
-          </Button>
-          <Button
-            variant="outline"
-            className="bg-neutral-50 dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-          >
-            <SortAsc className="h-4 w-4 mr-1" />
-            Sort
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                className="bg-neutral-50 dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+              >
+                <Filter className="h-4 w-4 mr-2" />
+                Filter
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuCheckboxItem
+                checked={sortBy === "recent"}
+                onClick={() => handleSortChange("recent")}
+              >
+                Recently Created
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={sortBy === "desc"}
+                onClick={() => handleSortChange("desc")}
+              >
+                Date (Newest First)
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={sortBy === "asc"}
+                onClick={() => handleSortChange("asc")}
+              >
+                Date (Oldest First)
+              </DropdownMenuCheckboxItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
       {/* Notes Grid - 3x3 Layout */}
       <div className="flex items-center justify-center">
         <div className="grid flex-1 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
-          {notes.map((note) => (
-            <Card
-              key={note._id}
-              className="group hover:shadow-md transition-all duration-300 bg-white dark:bg-neutral-900 hover:border-slate-300 dark:hover:border-slate-600"
-            >
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 pr-2">
-                    <CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100 line-clamp-1 transition-colors">
-                      {note.title}
-                    </CardTitle>
-                    <CardDescription className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                      {note.subject}
-                    </CardDescription>
-                  </div>
-
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
-                    >
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-
-              <CardContent className="h-full flex flex-col justify-between">
-                <div>
-                  <p className="text-xs text-gray-600 dark:text-gray-300 mb-4 line-clamp-3 leading-relaxed">
-                    {note.summary}
-                  </p>
-
-                  {/* Tags */}
-                  <div className="flex flex-wrap gap-1 mb-4">
-                    {note.tags?.slice(0, 3).map((tag, index) => (
-                      <Badge
-                        key={index}
-                        variant="secondary"
-                        className="text-xs bg-gray-100 dark:bg-gray-700/30 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700/20 transition-colors cursor-default"
-                      >
-                        {tag}
-                      </Badge>
-                    ))}
-                    {(note.tags?.length || 0) > 3 && (
-                      <Badge variant="outline" className="text-xs">
-                        +{note.tags.length - 3}
-                      </Badge>
-                    )}
-                  </div>
-
-                  {/* Metadata */}
-                  <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-4">
-                    <div className="flex items-center gap-3">
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {note?.updatedAt ? new Date(note.updatedAt).toLocaleDateString() : 'N/A'}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <FileText className="h-3 w-3" />4 pages
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                {/* Action Buttons */}
-                <div className="flex gap-2">
-                  <Link to={`/dashboard/notes/${note._id}`} className="flex-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full transition-colors"
-                    >
-                      <Eye className="h-3 w-3 mr-1" />
-                      View
-                    </Button>
-                  </Link>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      // Handle download functionality
-                      console.log(`Downloading note: ${note.title}`);
-                    }}
-                  >
-                    <Download className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      // Handle share functionality
-                      console.log(`Sharing note: ${note.title}`);
-                    }}
-                  >
-                    <Share2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+          {notes.map((note, index) => (
+            <NotesCard
+              key={index}
+              _id={note._id}
+              title={note.title}
+              subject={note.subject}
+              summary={note.summary}
+              tags={note.tags}
+              updatedAt={note.updatedAt}
+              status={note.status}
+            />
           ))}
         </div>
       </div>
@@ -267,6 +286,61 @@ export default function NotesPage({ loaderData }: Route.ComponentProps) {
               Upload Notes
             </Button>
           </Link>
+        </div>
+      )}
+
+      {/* Pagination - Only show if there are notes */}
+      {notes.length > 0 && totalPages > 1 && (
+        <Pagination className="mt-8">
+          <PaginationContent>
+            {/* Previous Button */}
+            <PaginationItem>
+              <PaginationPrevious
+                href={currentPage > 1 ? `?page=${currentPage - 1}` : "#"}
+                className={
+                  currentPage === 1 ? "pointer-events-none opacity-50" : ""
+                }
+              />
+            </PaginationItem>
+
+            {/* Page Numbers */}
+            {pageNumbers.map((pageNum, index) => (
+              <PaginationItem key={index}>
+                {pageNum === "..." ? (
+                  <PaginationEllipsis />
+                ) : (
+                  <PaginationLink
+                    href={`?page=${pageNum}`}
+                    isActive={pageNum === currentPage}
+                  >
+                    {pageNum}
+                  </PaginationLink>
+                )}
+              </PaginationItem>
+            ))}
+
+            {/* Next Button */}
+            <PaginationItem>
+              <PaginationNext
+                href={
+                  currentPage < totalPages ? `?page=${currentPage + 1}` : "#"
+                }
+                className={
+                  currentPage === totalPages
+                    ? "pointer-events-none opacity-50"
+                    : ""
+                }
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
+
+      {/* Notes count info */}
+      {notes.length > 0 && (
+        <div className="text-center mt-4 text-sm text-gray-500 dark:text-gray-400">
+          Showing {(currentPage - 1) * notesPerPage + 1} to{" "}
+          {Math.min(currentPage * notesPerPage, count)} of {count} notes
         </div>
       )}
     </div>

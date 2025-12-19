@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import { MongoClient } from "mongodb";
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
-import 'dotenv/config';
+import "dotenv/config";
 
 const MONGO_URI = process.env.MONGO_URI as string;
 
@@ -20,5 +20,5 @@ export const auth = betterAuth({
     autoSignIn: true,
     minPasswordLength: 8,
   },
-  trustedOrigins: ["http://localhost:5173"],
+  trustedOrigins: ["http://localhost:5173", "http://192.168.0.100:5173"],
 });

@@ -28,5 +28,11 @@ export default [
       route("notes/:id", "./routes/dashboard/notes/notes.$id.tsx"),
     ]),
   ]),
+  //Backend API routes (Resource Routes)
+  ...prefix("api", [
+    route("chat", "./routes/api/chat.ts"),
+    route("notes", "./routes/api/notes.ts"),
+    route("ai", "./routes/api/ai.ts"),
+  ]),
   route("api/auth/*", "./routes/auth.ts"),
 ] satisfies RouteConfig;
