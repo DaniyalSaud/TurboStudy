@@ -1,5 +1,6 @@
-import type { INotes } from "@/models/Notes";
+import "pdf-parse/worker"; // Import this before importing "pdf-parse"
 import { PDFParse } from "pdf-parse";
+import type { INotes } from "@/models/Notes";
 import { StringOutputParser } from "@langchain/core/output_parsers";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
@@ -38,18 +39,20 @@ const outputParser = new StringOutputParser();
 function stripCodeFences(response: string): string {
   // Remove ``` json and ``` wrappers if present
   let cleaned = response.replace(/^```\s*json\s*\n?|\n?```$/gi, "").trim();
-  
+
   // Fix common JSON formatting issues:
   // Remove trailing commas before closing braces/brackets
   cleaned = cleaned.replace(/,(\s*[}\]])/g, "$1");
-  
+
   // Try to parse and re-stringify to ensure valid JSON
   try {
     const parsed = JSON.parse(cleaned);
     return JSON.stringify(parsed);
   } catch (e) {
     // If parsing fails, return the cleaned version and let the caller handle it
-    console.warn("JSON cleanup: Initial parse failed, returning cleaned string");
+    console.warn(
+      "JSON cleanup: Initial parse failed, returning cleaned string"
+    );
     return cleaned;
   }
 }
