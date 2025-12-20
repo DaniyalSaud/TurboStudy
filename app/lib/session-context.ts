@@ -6,4 +6,5 @@ type SessionContext = {
   user: User;
 };
 
+
 export const sessionContext = createContext<SessionContext | null>(null);

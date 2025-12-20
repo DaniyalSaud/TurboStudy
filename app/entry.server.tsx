@@ -1,5 +1,5 @@
 import type { EntryContext } from "react-router";
-import { ServerRouter, createContext } from "react-router";
+import { ServerRouter, RouterContextProvider } from "react-router";
 import { isbot } from "isbot";
 import { renderToReadableStream } from "react-dom/server";
 
@@ -11,7 +11,7 @@ export interface AppLoadContext {
 
 // Export the getLoadContext function that returns a RouterContextProvider
 export function getLoadContext() {
-  return createContext<AppLoadContext>();
+  return new RouterContextProvider();
 }
 
 export default async function handleRequest(

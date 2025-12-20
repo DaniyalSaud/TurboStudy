@@ -1,10 +1,14 @@
-import { Link, NavLink, redirect, useLoaderData } from "react-router";
+import { Link, NavLink } from "react-router";
 import { Button } from "~/components/ui/button";
 import { ModeToggle } from "./theme-toggle";
 import { authClient } from "@/lib/auth-client";
 
 export default function Navbar() {
-  const {data} = authClient.useSession();
+  const { data } = authClient.useSession();
+
+  if (!data){
+    return null;
+  }
 
   return (
     <nav className="sticky top-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
@@ -14,7 +18,7 @@ export default function Navbar() {
           <div className="flex items-center">
             <Link
               to="/"
-              className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent"
+              className="text-2xl font-bold bg-linear-to-r from-blue-600 to-purple-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent"
             >
               TurboStudy
             </Link>
