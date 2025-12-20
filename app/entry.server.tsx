@@ -12,13 +12,21 @@ export default async function (
   responseStatusCode: number,
   responseHeaders: Headers,
   routerContext: EntryContext,
-  loadContext?: AppLoadContext,
+  _loadContext?: AppLoadContext,
 ): Promise<Response> {
+
+    console.log("Handling request in entry.server.tsx");
+    console.log("Request URL:", request.url);
+    console.log("Response Status Code:", responseStatusCode);
+    console.log("Response Headers:", responseHeaders);
+    console.log("Router Context:", routerContext);
+    console.log("Load Context:", _loadContext);
+
   return await handleRequest(
     request,
     responseStatusCode,
     responseHeaders,
     routerContext,
-    loadContext,
+    _loadContext,
   );
 }
