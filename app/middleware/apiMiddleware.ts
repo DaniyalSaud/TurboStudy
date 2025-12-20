@@ -8,7 +8,7 @@ export async function apiMiddleware(
   next: MiddlewareFunction<Response>
 ) {
   const data = await auth.api.getSession(request);
-  if (!data?.session) {
+  if (!data) {
     throw new Response("Unauthorized to make the request", { status: 401 });
   }
   context.set(sessionContext, data);

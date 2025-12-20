@@ -8,7 +8,8 @@ export async function authMiddleware(
   next: Route.MiddlewareFunction
 ) {
   const data = await auth.api.getSession(request);
-  if (!data?.session) {
+
+  if (!data) {
     throw redirect("/login");
   }
   
