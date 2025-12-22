@@ -22,18 +22,22 @@ import { ScrollArea } from "~/components/ui/scroll-area";
 import AIChat from "@/components/dashboard/notes/ai-chat";
 import { redirect } from "react-router";
 import { Chat } from "@/models/Chat";
+import { auth } from "@/lib/auth.server";
 
-export async function loader({ context, params, request }: Route.LoaderArgs) {
+export async function loader({ params, request }: Route.LoaderArgs) {
   try {
     const { id } = params;
     if (!id) {
       throw new Error("Note ID is required");
     }
-    const user = context.get(sessionContext)?.user;
 
-    if (!user) {
+    const data = await auth.api.getSession();
+
+    if (!data || !data.session || !data.user) {
       throw redirect("/login");
     }
+
+    const user = data.user;
 
     // Fetch the note by ID and userId and update the updatedAt timestamp
     const note = await Notes.findOneAndUpdate(

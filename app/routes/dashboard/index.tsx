@@ -6,21 +6,19 @@ import { Link, redirect } from "react-router";
 import { authClient } from "@/lib/auth-client";
 import { Skeleton } from "@/components/ui/skeleton";
 import RecentNotesCard from "@/components/dashboard/notes/recent-notes-card";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
 import AIInput from "@/components/dashboard/ai-input";
 import type { Route } from "./+types/index";
-import { sessionContext } from "@/lib/session-context";
 import { getRecentNotes } from "@/lib/DAL/notes";
 import { Separator } from "@/components/ui/separator";
+import { auth } from "@/lib/auth.server";
 
-export async function loader({ params, context }: Route.LoaderArgs) {
+export async function loader({ params }: Route.LoaderArgs) {
   try {
-    const session = context.get(sessionContext)?.session;
-    if (!session) {
+    const data = await auth.api.getSession();
+    if (!data || !data.session || !data.user) {
       throw redirect("/login");
     }
-
+    const session = data.session;
     const recentNotes = await getRecentNotes(session.userId);
 
     return { recentNotes };
@@ -29,50 +27,6 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     return {};
   }
 }
-
-// Mock data for recent notes
-// const recentNotes = [
-//   {
-//     id: "1",
-//     title: "Introduction to Machine Learning",
-//     subject: "Computer Science",
-//     lastModified: "2 hours ago",
-//     pageCount: 15,
-//     summary:
-//       "Comprehensive overview of ML algorithms, supervised and unsupervised learning techniques.",
-//     tags: ["Machine Learning", "AI", "Algorithms"],
-//   },
-//   {
-//     id: "2",
-//     title: "Organic Chemistry Reactions",
-//     subject: "Chemistry",
-//     lastModified: "1 day ago",
-//     pageCount: 8,
-//     summary:
-//       "Key organic reactions including nucleophilic substitution and elimination mechanisms.",
-//     tags: ["Organic Chemistry", "Reactions", "Mechanisms"],
-//   },
-//   {
-//     id: "3",
-//     title: "World War II History",
-//     subject: "History",
-//     lastModified: "3 days ago",
-//     pageCount: 22,
-//     summary:
-//       "Timeline and key events of WWII, including major battles and political changes.",
-//     tags: ["History", "WWII", "Politics"],
-//   },
-//   {
-//     id: "4",
-//     title: "World War II History",
-//     subject: "History",
-//     lastModified: "3 days ago",
-//     pageCount: 22,
-//     summary:
-//       "Timeline and key events of WWII, including major battles and political changes.",
-//     tags: ["History", "WWII", "Politics"],
-//   },
-// ];
 
 export default function MainPage({ loaderData }: Route.ComponentProps) {
   const { recentNotes = [] } = loaderData;

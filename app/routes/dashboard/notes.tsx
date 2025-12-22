@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FileText, BookOpen, Search, Filter } from "lucide-react";
-import { Link, redirect, useSearchParams} from "react-router";
+import { Link, redirect, useSearchParams } from "react-router";
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
@@ -26,13 +26,14 @@ import { getNotes } from "@/lib/DAL/notes";
 import NotesCard from "@/components/dashboard/notes/notes-card";
 import { Notes } from "@/models/Notes";
 
-export async function action({ context, params, request }: Route.ActionArgs) {
+export async function action({ request }: Route.ActionArgs) {
   try {
     const body = await request.json();
-    const user = context.get(sessionContext)?.user;
-    if (!user){
+    const data = await auth.api.getSession(request);
+    if (!data || !data.session || !data.user) {
       throw new Response("Unauthorized", { status: 401 });
     }
+    const user = data.user;
     if (body.action === "delete") {
       const deletedNote = await Notes.deleteOne({
         _id: body.noteId,
@@ -50,15 +51,18 @@ export async function action({ context, params, request }: Route.ActionArgs) {
     });
   } catch (err) {
     console.error("Error in notes action:", err);
-    throw new Response(JSON.stringify({ success: false, error: (err as Error).message }), {
-      status: 404,
-    });
+    throw new Response(
+      JSON.stringify({ success: false, error: (err as Error).message }),
+      {
+        status: 404,
+      }
+    );
   }
 }
 
-export async function loader({ context, params, request }: Route.LoaderArgs) {
-  const session = await auth.api.getSession(request);
-  if (!session?.session) {
+export async function loader({ request }: Route.LoaderArgs) {
+  const data = await auth.api.getSession(request);
+  if (!data || !data.session || !data.user) {
     throw redirect("/login");
   }
 
@@ -69,7 +73,7 @@ export async function loader({ context, params, request }: Route.LoaderArgs) {
     const sortBy = url.searchParams.get("sortBy") || "recent";
     const notesPerPage = 10;
 
-    const user = context.get(sessionContext)?.user;
+    const user = data.user;
 
     // Fetch notes from the database using userId
     if (!user?.id) {
