@@ -136,7 +136,7 @@ export default function NotesPage({ loaderData }: Route.ComponentProps) {
       <ResizablePanelGroup direction="horizontal" className="h-full">
         {/* Notes Panel - Left Side (60% initial) */}
         <ResizablePanel defaultSize={60} minSize={50}>
-          <Card className="h-full flex flex-col p-0 border-0">
+          <Card className="h-full flex flex-col p-0 border-0 sm:border sm:p-2">
             <CardHeader className="border-b">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
