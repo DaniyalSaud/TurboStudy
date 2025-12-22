@@ -1,24 +1,21 @@
 import { redirect } from "react-router";
 import type { Route } from "./+types/ai";
-import { apiMiddleware } from "@/middleware/apiMiddleware";
-import { PDFParse } from "pdf-parse";
-import { sessionContext } from "@/lib/session-context";
 import { Notes } from "@/models/Notes";
 import { generateNotes } from "@/background_jobs/generate.server";
-
-export const middleware: Route.MiddlewareFunction[] = [apiMiddleware];
+import { auth } from "@/lib/auth.server";
 
 export async function loader({}: Route.LoaderArgs) {
   // Does nothing
 }
 
-export async function action({ context, params, request }: Route.ActionArgs) {
+export async function action({ request }: Route.ActionArgs) {
   try {
-    const user = context.get(sessionContext)?.user;
-    if (!user) {
+    const data = await auth.api.getSession();
+    if (!data || !data.user || !data.session) {
       throw redirect("/login");
     }
 
+    const user = data.user;
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
     const prompt = formData.get("prompt") as string;
@@ -34,10 +31,10 @@ export async function action({ context, params, request }: Route.ActionArgs) {
     });
 
     await noteEntry.save();
-    
+
     // Background job to generate notes
     generateNotes(prompt, styles, file, noteEntry);
-    
+
     return redirect("/dashboard/notes");
   } catch (err) {
     console.error("Error generating notes: ", err);

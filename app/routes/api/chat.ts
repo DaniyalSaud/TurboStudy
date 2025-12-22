@@ -2,15 +2,11 @@ import { type Message as MyMessage } from "@/types/Message";
 import type { Route } from "./+types/chat";
 import { Message, type IMessage } from "@/models/Message";
 import { ObjectId } from "mongodb";
-import { apiMiddleware } from "@/middleware/apiMiddleware";
 import { formatMessages } from "@/utils/FormatMessages";
 import { chatLLMChain } from "@/lib/langchain.server";
 
-export const middleware: Route.MiddlewareFunction[] = [apiMiddleware];
-
-
 // POST request
-export async function action({ context, params, request }: Route.ActionArgs) {
+export async function action({ request }: Route.ActionArgs) {
   try {
     const body = await request.json();
     const {
@@ -44,9 +40,9 @@ export async function action({ context, params, request }: Route.ActionArgs) {
         "Messages saved successfully in the DB, generating AI response...",
     };
 
-    const successResponse = new Response(JSON.stringify(responseBody), { 
+    const successResponse = new Response(JSON.stringify(responseBody), {
       status: 200,
-      headers: { "Content-Type": "application/json" }
+      headers: { "Content-Type": "application/json" },
     });
     console.log("Returning success response:", successResponse);
     return successResponse;
@@ -57,9 +53,9 @@ export async function action({ context, params, request }: Route.ActionArgs) {
         message: "Internal Server Error",
         error: error instanceof Error ? error.message : "Unknown error",
       }),
-      { 
+      {
         status: 500,
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
       }
     );
     console.log("Returning error response:", errorResponse);

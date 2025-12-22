@@ -1,18 +1,26 @@
 import { AppSidebar } from "@/components/dashboard/app-sidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { Outlet } from "react-router";
+import { Outlet, redirect } from "react-router";
 import type { Route } from "./+types/layout";
-import { authMiddleware } from "@/middleware/authMiddleware";
 import { authClient } from "@/lib/auth-client";
-export const middleware: Route.MiddlewareFunction[] = [authMiddleware];
+import { auth } from "@/lib/auth.server";
+
+export async function loader({ request }: Route.LoaderArgs) {
+  // Check if user is authenticated
+  const data = await auth.api.getSession();
+  if (!data || !data.user || !data.session) {
+    throw redirect("/login");
+  }
+  return null;
+}
 
 export default function DashboardLayout() {
-  const {isPending} = authClient.useSession();
+  const { isPending } = authClient.useSession();
 
   if (isPending) {
     return null;
   }
-  
+
   return (
     <SidebarProvider>
       <AppSidebar />

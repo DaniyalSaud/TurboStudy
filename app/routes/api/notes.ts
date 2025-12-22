@@ -1,11 +1,8 @@
-import { apiMiddleware } from "@/middleware/apiMiddleware";
 import type { Route } from "./+types/notes";
-import { sessionContext } from "@/lib/session-context";
 import { Notes } from "@/models/Notes";
+import { auth } from "@/lib/auth.server";
 
-export const middleware: Route.MiddlewareFunction[] = [apiMiddleware];
-
-export async function action({ context, params, request }: Route.ActionArgs) {
+export async function action({ request }: Route.ActionArgs) {
   try {
     const body = await request.json();
 
@@ -19,10 +16,12 @@ export async function action({ context, params, request }: Route.ActionArgs) {
       throw new Error("No note ID found.");
     }
 
-    const user = context.get(sessionContext)?.user;
-
+    const data = await auth.api.getSession();
+    if (!data || !data.user || !data.session) {
+      throw new Error("User not authenticated.");
+    }
     const note = await Notes.findOne({ _id: noteId });
-    
+    const user = data.user;
     // Note not found
     if (!note) {
       throw new Error("Note not found.");
@@ -52,15 +51,17 @@ export async function action({ context, params, request }: Route.ActionArgs) {
     );
 
     // Serialize the updated note to ensure it's JSON-safe
-    const serializedNote = updatedNote ? {
-      _id: updatedNote._id.toString(),
-      title: updatedNote.title,
-      content: updatedNote.content,
-      userId: updatedNote.userId.toString(),
-      createdAt: updatedNote.createdAt?.toISOString(),
-      updatedAt: updatedNote.updatedAt?.toISOString(),
-      recentlyViewed: updatedNote.recentlyViewed?.toISOString(),
-    } : null;
+    const serializedNote = updatedNote
+      ? {
+          _id: updatedNote._id.toString(),
+          title: updatedNote.title,
+          content: updatedNote.content,
+          userId: updatedNote.userId.toString(),
+          createdAt: updatedNote.createdAt?.toISOString(),
+          updatedAt: updatedNote.updatedAt?.toISOString(),
+          recentlyViewed: updatedNote.recentlyViewed?.toISOString(),
+        }
+      : null;
 
     // Regenerate the summary after the changes.
 

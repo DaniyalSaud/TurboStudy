@@ -1,13 +1,11 @@
 import {
-  type RouteConfig,
   index,
   layout,
   prefix,
   route,
+  type RouteConfig,
 } from "@react-router/dev/routes";
-
-import 'dotenv/config';
-
+import "dotenv/config";
 
 export default [
   layout("./routes/_landing/layout.tsx", [
@@ -24,7 +22,7 @@ export default [
       route("notes", "./routes/dashboard/notes.tsx"),
       route("history", "./routes/dashboard/history.tsx"),
       route("chat", "./routes/dashboard/chat.tsx"),
-      route('chat/:id', './routes/dashboard/chat/chat.$id.tsx'),
+      route("chat/:id", "./routes/dashboard/chat/chat.$id.tsx"),
       route("notes/:id", "./routes/dashboard/notes/notes.$id.tsx"),
     ]),
   ]),
