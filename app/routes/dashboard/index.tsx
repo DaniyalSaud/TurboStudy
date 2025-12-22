@@ -12,9 +12,9 @@ import { getRecentNotes } from "@/lib/DAL/notes";
 import { Separator } from "@/components/ui/separator";
 import { auth } from "@/lib/auth.server";
 
-export async function loader({ params }: Route.LoaderArgs) {
+export async function loader({ request }: Route.LoaderArgs) {
   try {
-    const data = await auth.api.getSession();
+    const data = await auth.api.getSession(request);
     if (!data || !data.session || !data.user) {
       throw redirect("/login");
     }

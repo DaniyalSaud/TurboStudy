@@ -7,7 +7,7 @@ import { auth } from "@/lib/auth.server";
 
 export async function loader({ request }: Route.LoaderArgs) {
   // Check if user is authenticated
-  const data = await auth.api.getSession();
+  const data = await auth.api.getSession(request);
   if (!data || !data.user || !data.session) {
     throw redirect("/login");
   }

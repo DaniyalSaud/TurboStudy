@@ -31,7 +31,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
       throw new Error("Note ID is required");
     }
 
-    const data = await auth.api.getSession();
+    const data = await auth.api.getSession(request);
 
     if (!data || !data.session || !data.user) {
       throw redirect("/login");

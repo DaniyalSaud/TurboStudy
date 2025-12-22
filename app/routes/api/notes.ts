@@ -16,7 +16,7 @@ export async function action({ request }: Route.ActionArgs) {
       throw new Error("No note ID found.");
     }
 
-    const data = await auth.api.getSession();
+    const data = await auth.api.getSession(request);
     if (!data || !data.user || !data.session) {
       throw new Error("User not authenticated.");
     }

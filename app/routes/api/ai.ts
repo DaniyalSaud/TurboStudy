@@ -10,7 +10,7 @@ export async function loader({}: Route.LoaderArgs) {
 
 export async function action({ request }: Route.ActionArgs) {
   try {
-    const data = await auth.api.getSession();
+    const data = await auth.api.getSession(request);
     if (!data || !data.user || !data.session) {
       throw redirect("/login");
     }
