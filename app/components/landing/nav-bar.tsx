@@ -4,9 +4,9 @@ import { ModeToggle } from "./theme-toggle";
 import { authClient } from "@/lib/auth-client";
 
 export default function Navbar() {
-  const { data } = authClient.useSession();
+  const { isPending } = authClient.useSession();
 
-  if (!data){
+  if (isPending) {
     return null;
   }
 
