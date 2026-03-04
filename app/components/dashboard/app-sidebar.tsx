@@ -1,15 +1,17 @@
 import {
   Home,
   MessageSquare,
-  Clock,
   Settings,
   LogOut,
   User,
   ChevronDown,
-  MoreHorizontal,
   Loader2,
+  BookOpen,
+  Sparkles,
+  Lightbulb,
+  FileText,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 import {
   Sidebar,
@@ -27,9 +29,6 @@ import {
   Link,
   NavLink,
   useNavigate,
-  useNavigation,
-  useLoaderData,
-  type ClientLoaderFunctionArgs,
 } from "react-router";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -39,63 +38,55 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
 import { SideBarUserSkeleton } from "../skeletons/side-bar-user-skeleton";
 
-// Mock chat history data (replace with actual data from your backend)
-const chatHistory = [
+const quickActions = [
   {
-    id: "1",
-    title: "React Components Best Practices",
-    date: "Today",
-    time: "2:30 PM",
+    title: "Browse Notes",
+    description: "View and manage your study notes",
+    icon: BookOpen,
+    to: "/dashboard/notes",
   },
   {
-    id: "2",
-    title: "TypeScript Advanced Types",
-    date: "Today",
-    time: "1:15 PM",
-  },
-  {
-    id: "3",
-    title: "Database Design Principles",
-    date: "Yesterday",
-    time: "4:20 PM",
-  },
-  {
-    id: "4",
-    title: "API Authentication Methods",
-    date: "Yesterday",
-    time: "11:30 AM",
-  },
-  {
-    id: "5",
-    title: "JavaScript Performance Optimization",
-    date: "Monday",
-    time: "3:45 PM",
-  },
-  {
-    id: "6",
-    title: "CSS Grid vs Flexbox",
-    date: "Monday",
-    time: "10:20 AM",
-  },
-  {
-    id: "7",
-    title: "Node.js Security Best Practices",
-    date: "Last Friday",
-    time: "5:10 PM",
+    title: "Generate with AI",
+    description: "Upload & generate study material",
+    icon: Sparkles,
+    to: "/dashboard",
   },
 ];
 
-const truncateTitle = (title: string, maxLength: number = 25) => {
-  return title.length > maxLength
-    ? title.substring(0, maxLength) + "..."
-    : title;
-};
+const studyTips = [
+  {
+    tip: "Break study sessions into 25-minute focused blocks with 5-minute breaks (Pomodoro Technique).",
+    category: "Focus",
+  },
+  {
+    tip: "Teach what you learn to someone else — it's one of the most effective ways to retain information.",
+    category: "Retention",
+  },
+  {
+    tip: "Review your notes within 24 hours of taking them to boost long-term memory by up to 60%.",
+    category: "Memory",
+  },
+  {
+    tip: "Use active recall: close your notes and try to write down everything you remember.",
+    category: "Practice",
+  },
+  {
+    tip: "Connect new concepts to things you already know — building mental bridges strengthens understanding.",
+    category: "Learning",
+  },
+  {
+    tip: "Stay hydrated and take short walks between study sessions to keep your mind sharp.",
+    category: "Wellness",
+  },
+  {
+    tip: "Start with the hardest topic when your energy is highest, then move to easier material.",
+    category: "Strategy",
+  },
+];
 
 export function AppSidebar() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -114,9 +105,11 @@ export function AppSidebar() {
 
   const { data, isPending } = authClient.useSession();
 
-  if (!data?.user) {
-    return null;
-  }
+  // Pick two random tips to show per render
+  const displayedTips = useMemo(() => {
+    const shuffled = [...studyTips].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, 2);
+  }, []);
 
   return (
     <Sidebar className="border-r">
@@ -134,11 +127,11 @@ export function AppSidebar() {
         </Link>
       </SidebarHeader>
 
-      <SidebarContent className="flex flex-col justify-between pt-4 overflow-hidden">
-        {/* Home Section */}
+      <SidebarContent className="flex flex-col pt-4 overflow-hidden">
+        {/* Navigation */}
         <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu className="flex flex-col gap-2">
+            <SidebarMenu className="flex flex-col gap-1">
               <SidebarMenuItem>
                 <NavLink
                   to={"/dashboard"}
@@ -165,7 +158,7 @@ export function AppSidebar() {
                   }
                   end
                 >
-                  <Home className="h-4 w-4" />
+                  <FileText className="h-4 w-4" />
                   <span>Notes</span>
                 </NavLink>
               </SidebarMenuItem>
@@ -173,62 +166,66 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Chat History */}
-        <SidebarGroup className="flex-1 pr-0">
+        {/* Quick Actions */}
+        <SidebarGroup>
           <SidebarGroupLabel className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-            <Clock className="h-3 w-3" />
-            Recent Chats
+            <Sparkles className="h-3 w-3" />
+            Quick Actions
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <ScrollArea className="h-[350px] pr-4">
-              <SidebarMenu className="gap-1">
-                {chatHistory.map((chat) => (
-                  <SidebarMenuItem key={chat.id}>
-                    <NavLink
-                      to={`/dashboard/chat/${chat.id}`}
-                      className={({ isActive }: { isActive: boolean }) =>
-                        cn(
-                          "flex flex-col items-start gap-1 w-full p-2 text-accent-foreground/60 rounded-md text-sm transition-colors hover:bg-accent hover:text-accent-foreground group",
-                          isActive &&
-                            "bg-accent text-accent-foreground font-medium",
-                        )
-                      }
-                    >
-                      <div className="flex items-center justify-between w-full">
-                        <span className="text-sm font-medium truncate flex-1">
-                          {truncateTitle(chat.title)}
-                        </span>
-                        <DropdownMenu modal={false}>
-                          <DropdownMenuTrigger
-                            asChild
-                            onClick={(e) => e.preventDefault()}
-                          >
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <MoreHorizontal className="h-3 w-3" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start">
-                            <DropdownMenuItem>Rename</DropdownMenuItem>
-                            <DropdownMenuItem>Share</DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive">
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                      <span className="text-xs text-muted-foreground">
-                        {chat.date} • {chat.time}
+            <SidebarMenu className="gap-1">
+              {quickActions.map((action) => (
+                <SidebarMenuItem key={action.title}>
+                  <NavLink
+                    to={action.to}
+                    className={({ isActive }: { isActive: boolean }) =>
+                      cn(
+                        "flex items-start gap-3 w-full px-3 py-2.5 rounded-md text-sm transition-colors hover:bg-accent hover:text-accent-foreground group",
+                        isActive &&
+                        "bg-accent text-accent-foreground",
+                      )
+                    }
+                  >
+                    <div className="flex items-center justify-center w-8 h-8 rounded-md bg-primary/10 shrink-0 group-hover:bg-primary/15 transition-colors">
+                      <action.icon className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <span className="font-medium text-sm truncate">
+                        {action.title}
                       </span>
-                    </NavLink>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </ScrollArea>
+                      <span className="text-xs text-muted-foreground truncate">
+                        {action.description}
+                      </span>
+                    </div>
+                  </NavLink>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Study Tips */}
+        <SidebarGroup className="mt-auto">
+          <SidebarGroupLabel className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+            <Lightbulb className="h-3 w-3" />
+            Study Tips
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <div className="flex flex-col gap-2 px-2">
+              {displayedTips.map((item, i) => (
+                <div
+                  key={i}
+                  className="rounded-lg border border-border/50 bg-muted/30 p-3 transition-colors hover:bg-muted/50"
+                >
+                  <span className="inline-block text-[10px] font-semibold uppercase tracking-wider text-primary/70 mb-1">
+                    {item.category}
+                  </span>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {item.tip}
+                  </p>
+                </div>
+              ))}
+            </div>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>

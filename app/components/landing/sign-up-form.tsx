@@ -22,10 +22,12 @@ export function SignUpForm({
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card>
+      <Card className="border bg-card shadow-sm">
         <CardHeader className="text-center">
           <CardTitle className="text-xl">Create a new account</CardTitle>
-          <CardDescription>//TODO Description</CardDescription>
+          <CardDescription>
+            Start your study workspace in under a minute.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <fetcher.Form method="POST" >

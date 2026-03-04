@@ -1,48 +1,83 @@
-import { GalleryVerticalEnd } from "lucide-react";
+import { BookOpenText } from "lucide-react";
 
 import { LoginForm } from "@/components/landing/login-form";
 import { Link, redirect } from "react-router";
 import type { Route } from "../+types";
-import { authClient } from "@/lib/auth-client";
+import { auth } from "@/lib/auth.server";
 
-export async function clientAction({
-  context,
-  params,
-  request,
-  serverAction,
-}: Route.ClientActionArgs) {
+export async function action({ request }: Route.ActionArgs) {
   const formData = await request.formData();
-  console.log("Form Data:", Array.from(formData.entries()));
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
+  const email = String(formData.get("email") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
 
-  const { data, error } = await authClient.signIn.email({
-    email,
-    password,
-  });
-
-  if (error) {
-    console.error("Error signing in:", error);
-    return { error };
+  if (!email || !password) {
+    return Response.json(
+      { error: "Please enter both email and password." },
+      { status: 400 },
+    );
   }
-  console.log("User signed in:", data?.user);
-  if (data?.user) {
-    return redirect("/dashboard");
+
+  try {
+    const authResponse = await auth.api.signInEmail({
+      body: {
+        email,
+        password,
+      },
+      headers: request.headers,
+      asResponse: true,
+    });
+
+    if (authResponse.status >= 400) {
+      const responseBody = await authResponse.json().catch(() => null);
+      const errorMessage =
+        responseBody?.message ||
+        responseBody?.error?.message ||
+        "Invalid email or password.";
+
+      return Response.json(
+        { error: errorMessage },
+        { status: authResponse.status },
+      );
+    }
+
+    const responseHeaders = new Headers();
+    const setCookies = (
+      authResponse.headers as Headers & { getSetCookie?: () => string[] }
+    ).getSetCookie?.();
+
+    if (setCookies?.length) {
+      for (const cookie of setCookies) {
+        responseHeaders.append("set-cookie", cookie);
+      }
+    } else {
+      const setCookie = authResponse.headers.get("set-cookie");
+      if (setCookie) {
+        responseHeaders.append("set-cookie", setCookie);
+      }
+    }
+
+    return redirect("/dashboard", { headers: responseHeaders });
+  } catch (error) {
+    console.error("Login failed:", error);
+    return Response.json(
+      { error: "Unable to sign in right now. Please try again." },
+      { status: 500 },
+    );
   }
 }
 
 export default function LoginPage() {
   return (
-    <div className="bg-muted flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
-      <div className="flex w-full max-w-sm flex-col gap-6">
+    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-10 sm:px-6 lg:px-8">
+      <div className="w-full max-w-sm space-y-6">
         <Link
           to="/"
-          className="flex items-center gap-2 self-center font-medium"
+          className="mx-auto flex w-fit items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
-          <div className="bg-primary text-primary-foreground flex size-6 items-center justify-center rounded-md">
-            <GalleryVerticalEnd className="size-4" />
+          <div className="flex size-7 items-center justify-center rounded-md bg-primary/10">
+            <BookOpenText className="size-4 text-primary" />
           </div>
-          TurboStudy
+          Back to home
         </Link>
         <LoginForm />
       </div>

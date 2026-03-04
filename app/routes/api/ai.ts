@@ -1,14 +1,14 @@
 import { redirect } from "react-router";
-import type { Route } from "./+types/ai";
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { Notes } from "@/models/Notes";
 import { generateNotes } from "@/background_jobs/generate.server";
 import { auth } from "@/lib/auth.server";
 
-export async function loader({}: Route.LoaderArgs) {
+export async function loader({}: LoaderFunctionArgs) {
   // Does nothing
 }
 
-export async function action({ request }: Route.ActionArgs) {
+export async function action({ request }: ActionFunctionArgs) {
   try {
     const data = await auth.api.getSession(request);
     if (!data || !data.user || !data.session) {

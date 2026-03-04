@@ -1,8 +1,10 @@
 import { betterAuth } from "better-auth";
 import { MongoClient } from "mongodb";
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
+// import {setServers} from "dns";
 import "dotenv/config";
 
+// setServers(["8.8.8.8", "8.8.4.4"]);
 const MONGO_URI = process.env.MONGO_URI as string;
 
 console.log("MONGO_URI:", MONGO_URI);

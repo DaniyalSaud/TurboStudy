@@ -9,24 +9,29 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Form, Link, useFetcher, useFormAction } from "react-router";
+import { Form, Link, useActionData, useNavigation } from "react-router";
 import { Loader2 } from "lucide-react";
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  const fetcher = useFetcher();
+  const navigation = useNavigation();
+  const actionData = useActionData() as { error?: string } | undefined;
+  const isSubmitting =
+    navigation.state === "submitting" &&
+    navigation.formMethod?.toLowerCase() === "post";
+  const actionError = actionData?.error ?? "";
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card>
+      <Card className="border bg-card shadow-sm">
         <CardHeader className="text-center">
           <CardTitle className="text-xl">Welcome back</CardTitle>
-          <CardDescription>Login with your Email Address</CardDescription>
+          <CardDescription>Sign in to continue to TurboStudy.</CardDescription>
         </CardHeader>
         <CardContent>
-          <fetcher.Form method="post">
+          <Form method="post">
             <div className="grid gap-6">
               <div className="grid gap-6">
                 <div className="grid gap-3">
@@ -56,12 +61,17 @@ export function LoginForm({
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={fetcher.state === "submitting"}>
-                  {fetcher.state === "submitting" && (
+                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                  {isSubmitting && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
                   Login
                 </Button>
+                {actionError && (
+                  <p className="text-sm text-destructive" role="alert">
+                    {actionError}
+                  </p>
+                )}
               </div>
               <div className="text-center text-sm">
                 Don&apos;t have an account?{" "}
@@ -70,7 +80,7 @@ export function LoginForm({
                 </Link>
               </div>
             </div>
-          </fetcher.Form>
+          </Form>
         </CardContent>
       </Card>
       <div className="text-muted-foreground *:[a]:hover:text-primary text-center text-xs text-balance *:[a]:underline *:[a]:underline-offset-4">

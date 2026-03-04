@@ -18,19 +18,15 @@ export default [
   ...prefix("dashboard", [
     layout("./routes/dashboard/layout.tsx", [
       index("routes/dashboard/index.tsx"),
-      route("upload", "./routes/dashboard/upload.tsx"),
       route("notes", "./routes/dashboard/notes.tsx"),
-      route("history", "./routes/dashboard/history.tsx"),
-      route("chat", "./routes/dashboard/chat.tsx"),
-      route("chat/:id", "./routes/dashboard/chat/chat.$id.tsx"),
       route("notes/:id", "./routes/dashboard/notes/notes.$id.tsx"),
     ]),
   ]),
   //Backend API routes (Resource Routes)
   ...prefix("api", [
+    route("ai", "./routes/api/ai.ts"),
     route("chat", "./routes/api/chat.ts"),
     route("notes", "./routes/api/notes.ts"),
-    route("ai", "./routes/api/ai.ts"),
   ]),
-  route("api/auth/*", "./routes/auth.ts"),
+  route("api/auth/*", "./routes/api.auth.$.ts"),
 ] satisfies RouteConfig;

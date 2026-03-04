@@ -1,9 +1,8 @@
-import { AppSidebar } from "@/components/dashboard/app-sidebar";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { Outlet, redirect } from "react-router";
+import { Outlet, redirect, useLoaderData } from "react-router";
 import type { Route } from "./+types/layout";
-import { authClient } from "@/lib/auth-client";
 import { auth } from "@/lib/auth.server";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/dashboard/app-sidebar";
 
 export async function loader({ request }: Route.LoaderArgs) {
   // Check if user is authenticated
@@ -11,23 +10,19 @@ export async function loader({ request }: Route.LoaderArgs) {
   if (!data || !data.user || !data.session) {
     throw redirect("/login");
   }
+
   return null;
 }
 
 export default function DashboardLayout() {
-  const { isPending } = authClient.useSession();
-
-  if (isPending) {
-    return null;
-  }
+  useLoaderData<typeof loader>();
 
   return (
     <SidebarProvider>
       <AppSidebar />
-      <main className="relative flex-1 bg-neutral-50 dark:bg-neutral-950">
-        <SidebarTrigger className="w-4 h-4 absolute" size={"icon"} />
+      <SidebarInset className="bg-neutral-50 dark:bg-neutral-950">
         <Outlet />
-      </main>
+      </SidebarInset>
     </SidebarProvider>
   );
 }

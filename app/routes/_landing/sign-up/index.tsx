@@ -1,4 +1,4 @@
-import { GalleryVerticalEnd } from "lucide-react";
+import { BookOpenText } from "lucide-react";
 
 import { Link, redirect } from "react-router";
 import { SignUpForm } from "@/components/landing/sign-up-form";
@@ -48,16 +48,16 @@ export async function clientAction({
 
 export default function LoginPage() {
   return (
-    <div className="bg-muted flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
-      <div className="flex w-full max-w-sm flex-col gap-6">
+    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-10 sm:px-6 lg:px-8">
+      <div className="w-full max-w-sm space-y-6">
         <Link
           to="/"
-          className="flex items-center gap-2 self-center font-medium"
+          className="mx-auto flex w-fit items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
-          <div className="bg-primary text-primary-foreground flex size-6 items-center justify-center rounded-md">
-            <GalleryVerticalEnd className="size-4" />
+          <div className="flex size-7 items-center justify-center rounded-md bg-primary/10">
+            <BookOpenText className="size-4 text-primary" />
           </div>
-          TurboStudy
+          Back to home
         </Link>
         <SignUpForm />
       </div>

@@ -3,6 +3,6 @@ import type { auth } from "@/lib/auth.server";
 import { inferAdditionalFields } from "better-auth/client/plugins";
 
 export const authClient = createAuthClient({
-    baseURL: process.env.VITE_BASE_URL as string,
+    baseURL: import.meta.env.VITE_BASE_URL as string,
     plugins: [inferAdditionalFields<typeof auth>()],
 });

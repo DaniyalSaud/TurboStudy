@@ -6,6 +6,9 @@
         "shadcn@latest",
         "mcp"
       ]
-    }
+    },
+    "better-auth": {
+       "url": "https://mcp.inkeep.com/better-auth/mcp"
+   }
   }
 }

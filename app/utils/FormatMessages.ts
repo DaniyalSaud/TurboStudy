@@ -11,5 +11,7 @@ export function formatMessages(messages: IMessage[]): string {
         content: msg.content
     }));
 
-    return JSON.stringify(formattedMessages);
+    return formattedMessages
+      .map((message) => `${message.role}: ${message.content}`)
+      .join("\n");
 }

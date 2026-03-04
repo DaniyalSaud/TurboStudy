@@ -10,14 +10,18 @@ export const geminiLLM = new ChatGoogleGenerativeAI({
 });
 
 const chatPrompt = ChatPromptTemplate.fromTemplate(
-  `You are an AI assistant that helps users by answering their questions based on the provided context.
+  `You are an AI study assistant.
+    You must answer only using the provided note context.
+    If the answer is not present in the note context, respond exactly with:
+    "I don't know. I cannot provide an answer based on the given note."
+
     Chat History: 
     {chat_history}
     
     Context: {context}
     Question: {question}
 
-    Provide a detailed and accurate answer based on the context. If the context does not contain the answer, respond with "I don't know. I cannot provide an answer based on the given information."`
+    Keep answers clear and concise, and do not use external knowledge.`
 ); 
 
 export const chatLLMChain = chatPrompt.pipe(geminiLLM).pipe(
